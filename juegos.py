@@ -1,4 +1,4 @@
-# juegos.py - TODO EN UN SOLO ARCHIVO
+# juegos.py 
 import tkinter as tk
 from tkinter import messagebox
 import random
