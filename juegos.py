@@ -9,7 +9,7 @@ class SuiteJuegos:
         self.crear_menu_principal()
     
     def crear_menu_principal(self):
-        """Crea el menú principal con el diseño que te gusta"""
+        """Crea el menú principal con el diseño"""
         # Limpiar ventana
         for widget in self.root.winfo_children():
             widget.destroy()
@@ -64,7 +64,7 @@ class SuiteJuegos:
             # Efecto hover
             self.configurar_hover(btn, color)
         
-        # Footer con tu nombre
+        # Footer con nombre
         footer = tk.Label(frame_principal, 
                          text="Desarrollado por Hernán Ariel Ortega Agüero con Python y Tkinter",
                          font=("Arial", 10), bg='#2C3E50', fg='#7F8C8D',
@@ -90,7 +90,7 @@ class SuiteJuegos:
         return f'#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}'
     
     def buscaminas(self):
-        """Juego de Buscaminas con TU diseño preferido"""
+        """Juego de Buscaminas con diseño preferido"""
         # Limpiar ventana
         for widget in self.root.winfo_children():
             widget.destroy()
