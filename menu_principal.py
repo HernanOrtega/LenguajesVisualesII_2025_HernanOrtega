@@ -17,7 +17,7 @@ class MenuPrincipal:
         
         # Configurar ventana
         self.root.title("Suite de Juegos - Menú Principal")
-        self.root.geometry("600x500")
+        self.root.geometry("600x550")  # Aumentamos un poco la altura para el nuevo botón
         self.root.configure(bg='#2C3E50')
         
         # Frame principal
@@ -43,13 +43,14 @@ class MenuPrincipal:
         frame_botones = tk.Frame(frame_principal, bg='#2C3E50', pady=30)
         frame_botones.pack(expand=True)
         
-        # Botones de juegos con colores
+        # Botones de juegos con colores (AÑADIMOS EL NUEVO JUEGO)
         botones_info = [
             ("🔤 SOPA DE LETRAS", "#E74C3C", self.sopa_letras),
             ("🧩 CRUZIGRAMA", "#3498DB", self.cruzigrama), 
             ("💣 BUSCAMINAS", "#2ECC71", self.buscaminas),
+            ("🔴 CONECTA PUNTOS", "#9B59B6", self.conecta_puntos),  # NUEVO JUEGO
             ("📊 PUNTAJES", "#F39C12", self.mostrar_puntajes),
-            ("👤 USUARIOS", "#9B59B6", self.menu_usuarios),
+            ("👤 USUARIOS", "#1ABC9C", self.menu_usuarios),
             ("🚪 SALIR", "#95A5A6", self.root.quit)
         ]
         
@@ -170,3 +171,8 @@ class MenuPrincipal:
         """Abre el juego de Buscaminas"""
         from buscaminas import Buscaminas
         Buscaminas(self.root)
+    
+    def conecta_puntos(self):
+        """Abre el juego de Conecta Puntos""" 
+        from conecta_puntos import ConectaPuntos
+        ConectaPuntos(self.root)
