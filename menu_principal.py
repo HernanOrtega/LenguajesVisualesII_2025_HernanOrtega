@@ -15,9 +15,9 @@ class MenuPrincipal:
         for widget in self.root.winfo_children():
             widget.destroy()
         
-        # Configurar ventana
+        # Configurar ventana - más ancha para dos columnas
         self.root.title("Suite de Juegos - Menú Principal")
-        self.root.geometry("600x550")  # Aumentamos un poco la altura para el nuevo botón
+        self.root.geometry("750x650")
         self.root.configure(bg='#2C3E50')
         
         # Frame principal
@@ -39,23 +39,23 @@ class MenuPrincipal:
                            pady=10)
         subtitulo.pack()
         
-        # Frame para botones
+        # Frame para botones con DOS COLUMNAS
         frame_botones = tk.Frame(frame_principal, bg='#2C3E50', pady=30)
         frame_botones.pack(expand=True)
         
-        # Botones de juegos con colores (AÑADIMOS EL NUEVO JUEGO)
-        botones_info = [
-            ("🔤 SOPA DE LETRAS", "#E74C3C", self.sopa_letras),
+        # COLUMNA IZQUIERDA - Juegos principales
+        frame_col_izq = tk.Frame(frame_botones, bg='#2C3E50')
+        frame_col_izq.pack(side='left', padx=20)
+        
+        botones_izq = [
+            ("📤 SOPA DE LETRAS", "#E74C3C", self.sopa_letras),
             ("🧩 CRUZIGRAMA", "#3498DB", self.cruzigrama), 
             ("💣 BUSCAMINAS", "#2ECC71", self.buscaminas),
-            ("🔴 CONECTA PUNTOS", "#9B59B6", self.conecta_puntos),  # NUEVO JUEGO
-            ("📊 PUNTAJES", "#F39C12", self.mostrar_puntajes),
-            ("👤 USUARIOS", "#1ABC9C", self.menu_usuarios),
-            ("🚪 SALIR", "#95A5A6", self.root.quit)
+            ("🔴 CONECTA PUNTOS", "#9B59B6", self.conecta_puntos),
         ]
         
-        for texto, color, comando in botones_info:
-            btn = tk.Button(frame_botones, text=texto, 
+        for texto, color, comando in botones_izq:
+            btn = tk.Button(frame_col_izq, text=texto, 
                           font=("Arial", 12, "bold"),
                           bg=color, fg='white', 
                           activebackground=color,
@@ -66,8 +66,31 @@ class MenuPrincipal:
                           cursor='hand2',
                           command=comando)
             btn.pack(pady=8)
-            
-            # Efecto hover
+            self.configurar_hover(btn, color)
+        
+        # COLUMNA DERECHA - Nuevo juego y opciones
+        frame_col_der = tk.Frame(frame_botones, bg='#2C3E50')
+        frame_col_der.pack(side='left', padx=20)
+        
+        botones_der = [
+            ("🧭 LABERINTO", "#E67E22", self.laberinto),  # NUEVO JUEGO
+            ("📊 PUNTAJES", "#F39C12", self.mostrar_puntajes),
+            ("👤 USUARIOS", "#1ABC9C", self.menu_usuarios),
+            ("🚪 SALIR", "#95A5A6", self.root.quit)
+        ]
+        
+        for texto, color, comando in botones_der:
+            btn = tk.Button(frame_col_der, text=texto, 
+                          font=("Arial", 12, "bold"),
+                          bg=color, fg='white', 
+                          activebackground=color,
+                          activeforeground='white',
+                          width=20, height=2,
+                          relief='flat',
+                          border=0,
+                          cursor='hand2',
+                          command=comando)
+            btn.pack(pady=8)
             self.configurar_hover(btn, color)
         
         # Footer con tu nombre
@@ -133,7 +156,7 @@ class MenuPrincipal:
                      font=("Arial", 12), bg='#3498DB', fg='white', width=20,
                      command=self.registrar_usuario).pack(pady=10)
             
-            tk.Button(frame_botones, text="🔐 Iniciar Sesión", 
+            tk.Button(frame_botones, text="🔓 Iniciar Sesión", 
                      font=("Arial", 12), bg='#2ECC71', fg='white', width=20,
                      command=self.iniciar_sesion).pack(pady=10)
         
@@ -176,3 +199,8 @@ class MenuPrincipal:
         """Abre el juego de Conecta Puntos""" 
         from conecta_puntos import ConectaPuntos
         ConectaPuntos(self.root)
+    
+    def laberinto(self):
+        """Abre el juego de Laberinto"""
+        from laberinto import Laberinto
+        Laberinto(self.root)
