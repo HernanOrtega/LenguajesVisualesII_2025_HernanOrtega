@@ -15,9 +15,9 @@ class MenuPrincipal:
         for widget in self.root.winfo_children():
             widget.destroy()
         
-        # Configurar ventana - más ancha para dos columnas
+        # Configurar ventana - más ancha para tres columnas
         self.root.title("Suite de Juegos - Menú Principal")
-        self.root.geometry("750x650")
+        self.root.geometry("900x650")
         self.root.configure(bg='#2C3E50')
         
         # Frame principal
@@ -39,17 +39,17 @@ class MenuPrincipal:
                            pady=10)
         subtitulo.pack()
         
-        # Frame para botones con DOS COLUMNAS
+        # Frame para botones con TRES COLUMNAS
         frame_botones = tk.Frame(frame_principal, bg='#2C3E50', pady=30)
         frame_botones.pack(expand=True)
         
         # COLUMNA IZQUIERDA - Juegos principales
         frame_col_izq = tk.Frame(frame_botones, bg='#2C3E50')
-        frame_col_izq.pack(side='left', padx=20)
+        frame_col_izq.pack(side='left', padx=15)
         
         botones_izq = [
-            ("📤 SOPA DE LETRAS", "#E74C3C", self.sopa_letras),
-            ("🧩 CRUZIGRAMA", "#3498DB", self.cruzigrama), 
+            ("🔤 SOPA DE LETRAS", "#E74C3C", self.sopa_letras),
+            ("🧩 CRUCIGRAMA", "#3498DB", self.cruzigrama), 
             ("💣 BUSCAMINAS", "#2ECC71", self.buscaminas),
             ("🔴 CONECTA PUNTOS", "#9B59B6", self.conecta_puntos),
         ]
@@ -68,19 +68,19 @@ class MenuPrincipal:
             btn.pack(pady=8)
             self.configurar_hover(btn, color)
         
-        # COLUMNA DERECHA - Nuevo juego y opciones
-        frame_col_der = tk.Frame(frame_botones, bg='#2C3E50')
-        frame_col_der.pack(side='left', padx=20)
+        # COLUMNA CENTRAL - Más juegos
+        frame_col_centro = tk.Frame(frame_botones, bg='#2C3E50')
+        frame_col_centro.pack(side='left', padx=15)
         
-        botones_der = [
-            ("🧭 LABERINTO", "#E67E22", self.laberinto),  # NUEVO JUEGO
-            ("📊 PUNTAJES", "#F39C12", self.mostrar_puntajes),
-            ("👤 USUARIOS", "#1ABC9C", self.menu_usuarios),
+        botones_centro = [
+            ("🧭 LABERINTO", "#E67E22", self.laberinto),
+            ("🎯 AHORCADO", "#1ABC9C", self.ahorcado),  # NUEVO JUEGO
+            ("👤 USUARIOS", "#16A085", self.menu_usuarios),
             ("🚪 SALIR", "#95A5A6", self.root.quit)
         ]
         
-        for texto, color, comando in botones_der:
-            btn = tk.Button(frame_col_der, text=texto, 
+        for texto, color, comando in botones_centro:
+            btn = tk.Button(frame_col_centro, text=texto, 
                           font=("Arial", 12, "bold"),
                           bg=color, fg='white', 
                           activebackground=color,
@@ -92,6 +92,38 @@ class MenuPrincipal:
                           command=comando)
             btn.pack(pady=8)
             self.configurar_hover(btn, color)
+        
+        # COLUMNA DERECHA - Torre de Hanói y Puntajes
+        frame_col_der = tk.Frame(frame_botones, bg='#2C3E50')
+        frame_col_der.pack(side='left', padx=15)
+        
+        # Botón Torre de Hanói
+        btn_hanoi = tk.Button(frame_col_der, text="🗼 TORRE DE HANÓI", 
+                      font=("Arial", 12, "bold"),
+                      bg="#16A085", fg='white', 
+                      activebackground="#16A085",
+                      activeforeground='white',
+                      width=20, height=2,
+                      relief='flat',
+                      border=0,
+                      cursor='hand2',
+                      command=self.torre_hanoi)
+        btn_hanoi.pack(pady=8)
+        self.configurar_hover(btn_hanoi, "#16A085")
+        
+        # Botón de puntajes
+        btn_puntajes = tk.Button(frame_col_der, text="📊 PUNTAJES", 
+                      font=("Arial", 12, "bold"),
+                      bg="#F39C12", fg='white', 
+                      activebackground="#F39C12",
+                      activeforeground='white',
+                      width=20, height=2,
+                      relief='flat',
+                      border=0,
+                      cursor='hand2',
+                      command=self.mostrar_puntajes)
+        btn_puntajes.pack(pady=8)
+        self.configurar_hover(btn_puntajes, "#F39C12")
         
         # Footer con tu nombre
         footer = tk.Label(frame_principal, 
@@ -204,3 +236,13 @@ class MenuPrincipal:
         """Abre el juego de Laberinto"""
         from laberinto import Laberinto
         Laberinto(self.root)
+    
+    def ahorcado(self):
+        """Abre el juego de Ahorcado"""
+        from ahorcado import Ahorcado
+        Ahorcado(self.root)
+    
+    def torre_hanoi(self):
+        """Abre el juego de Torre de Hanói"""
+        from torre_hanoi import TorreHanoi
+        TorreHanoi(self.root)
