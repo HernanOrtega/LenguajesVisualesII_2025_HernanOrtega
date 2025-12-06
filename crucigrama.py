@@ -3,10 +3,18 @@ import tkinter as tk
 from tkinter import messagebox
 import datetime
 import random
+import sys
+import os
+
+# Añadir el directorio padre al path para importar módulos
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 class Crucigrama:
-    def __init__(self, root):
+    def __init__(self, root, auth=None, database=None):
         self.root = root
+        self.auth = auth  # Referencia al sistema de autenticación
+        self.database = database  # Referencia a la base de datos
+        
         self.tablero = []
         self.celdas = []
         self.definiciones = []
@@ -17,12 +25,52 @@ class Crucigrama:
         self.puntaje = 0
         self.juego_activo = True
         self.palabras_completadas = set()
-        self.letras_ayuda_reveladas = set()  # Para trackear letras reveladas con ayuda
+        self.bindings_mousewheel = []  # Para trackear bindings y limpiarlos
         
         # Datos de crucigramas por categoría
         self.crucigramas_data = self.obtener_crucigramas_integrados()
         
+        # Verificar conexión con la base de datos
+        self.verificar_conexion_bd()
+        
         self.mostrar_menu_principal()
+
+    def verificar_conexion_bd(self):
+        """Verifica la conexión con la base de datos"""
+        print("=" * 50)
+        print("Verificando conexión con base de datos...")
+        if self.auth:
+            print(f"✓ Auth configurado: {self.auth}")
+            if self.auth.usuario_actual:
+                print(f"✓ Usuario actual: {self.auth.usuario_actual}")
+            else:
+                print("⚠️ Usuario no autenticado")
+        else:
+            print("⚠️ Auth no configurado")
+            
+        if self.database:
+            print("✓ Database configurado")
+            try:
+                conexion = self.database.get_conexion()
+                cursor = conexion.cursor()
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                tablas = cursor.fetchall()
+                print(f"✓ Tablas en la BD: {[t[0] for t in tablas]}")
+                conexion.close()
+            except Exception as e:
+                print(f"❌ Error al verificar BD: {e}")
+        else:
+            print("⚠️ Database no configurado")
+        print("=" * 50)
+
+    def limpiar_bindings_mousewheel(self):
+        """Limpia todos los bindings del mousewheel para prevenir errores"""
+        for binding_id in self.bindings_mousewheel:
+            try:
+                self.root.unbind_all(binding_id)
+            except:
+                pass
+        self.bindings_mousewheel = []
 
     def obtener_crucigramas_integrados(self):
         """Devuelve todos los crucigramas integrados"""
@@ -33,9 +81,7 @@ class Crucigrama:
                 'filas': 15,
                 'columnas': 15,
                 'palabras': [
-                    # Horizontales colocadas en filas separadas, columnas empezando en 2
                     {'palabra': 'PYTHON', 'definicion': 'Lenguaje interpretado de alto nivel', 'fila': 2, 'columna': 2, 'direccion': 'H', 'numero': 1},
-                    # Verticales colocadas en columnas altas para evitar solapamientos no intencionados
                     {'palabra': 'JAVASCRIPT', 'definicion': 'Lenguaje para desarrollo web', 'fila': 1, 'columna': 12, 'direccion': 'V', 'numero': 2},
                     {'palabra': 'HTML', 'definicion': 'Lenguaje de marcado web', 'fila': 4, 'columna': 2, 'direccion': 'H', 'numero': 3},
                     {'palabra': 'CSS', 'definicion': 'Hojas de estilo en cascada', 'fila': 1, 'columna': 13, 'direccion': 'V', 'numero': 4},
@@ -54,7 +100,7 @@ class Crucigrama:
                 'columnas': 15,
                 'palabras': [
                     {'palabra': 'ATOMO', 'definicion': 'Unidad básica de la materia', 'fila': 2, 'columna': 2, 'direccion': 'H', 'numero': 1},
-                    {'palabra': 'MOLECULA', 'definicion': 'Conjunto de átoms enlazados', 'fila': 1, 'columna': 12, 'direccion': 'V', 'numero': 2},
+                    {'palabra': 'MOLECULA', 'definicion': 'Conjunto de átomos enlazados', 'fila': 1, 'columna': 12, 'direccion': 'V', 'numero': 2},
                     {'palabra': 'ADN', 'definicion': 'Material genético de los seres vivos', 'fila': 4, 'columna': 2, 'direccion': 'H', 'numero': 3},
                     {'palabra': 'CELULA', 'definicion': 'Unidad básica de los organismos', 'fila': 1, 'columna': 13, 'direccion': 'V', 'numero': 4},
                     {'palabra': 'GRAVEDAD', 'definicion': 'Fuerza de atracción entre masas', 'fila': 6, 'columna': 2, 'direccion': 'H', 'numero': 5},
@@ -125,6 +171,9 @@ class Crucigrama:
         """Muestra el menú principal"""
         print("Mostrando menú principal...")
         
+        # Limpiar bindings del mousewheel
+        self.limpiar_bindings_mousewheel()
+        
         # Limpiar todo
         for w in self.root.winfo_children():
             w.destroy()
@@ -146,6 +195,14 @@ class Crucigrama:
         
         tk.Label(title_frame, text="Selecciona una categoría:", 
                 font=("Arial", 16), bg='#2C3E50', fg='white').pack(pady=10)
+        
+        # Información del usuario
+        if self.auth and self.auth.usuario_actual:
+            tk.Label(title_frame, text=f"👤 Jugando como: {self.auth.usuario_actual}", 
+                    font=("Arial", 12, "bold"), bg='#2C3E50', fg='#2ECC71').pack(pady=5)
+        else:
+            tk.Label(title_frame, text="⚠️ No autenticado - Los puntajes no se guardarán", 
+                    font=("Arial", 10), bg='#2C3E50', fg='#E74C3C').pack(pady=5)
         
         # Contenedor principal para categorías con scrollbar
         categories_container = tk.Frame(main_frame, bg='#2C3E50')
@@ -179,6 +236,15 @@ class Crucigrama:
         
         canvas.pack(side="left", fill="both", expand=True, padx=(0, 5))
         scrollbar.pack(side="right", fill="y", padx=(5, 0))
+        
+        # Guardar binding para limpiarlo después
+        binding_id = "<MouseWheel>"
+        self.bindings_mousewheel.append(binding_id)
+        
+        def on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        canvas.bind_all("<MouseWheel>", on_mousewheel)
         
         inner_container = tk.Frame(scrollable_frame, bg='#2C3E50')
         inner_container.pack(expand=True, fill='both', padx=50)
@@ -253,6 +319,9 @@ class Crucigrama:
         """Crea la pantalla de juego"""
         print(f"Creando juego: {crucigrama['nombre']}")
         
+        # Limpiar bindings del mousewheel
+        self.limpiar_bindings_mousewheel()
+        
         # Limpiar
         for w in self.root.winfo_children():
             w.destroy()
@@ -268,7 +337,6 @@ class Crucigrama:
         self.tiempo_inicio = datetime.datetime.now()
         self.juego_activo = True
         self.palabras_completadas = set()
-        self.letras_ayuda_reveladas = set()
         
         # Header
         header = tk.Frame(self.root, bg='#34495E')
@@ -326,13 +394,16 @@ class Crucigrama:
         def_content.update_idletasks()
         def_canvas.configure(scrollregion=def_canvas.bbox("all"), yscrollcommand=def_scrollbar.set)
         
-        # Bind para actualizar el scroll cuando cambie el tamaño
-        def_content.bind("<Configure>", lambda e: def_canvas.configure(scrollregion=def_canvas.bbox("all")))
-        
-        # Habilitar scroll con la rueda del mouse
+        # Habilitar scroll con la rueda del mouse (con corrección de error)
         def on_mousewheel(event):
-            def_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            try:
+                def_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            except Exception as e:
+                print(f"Error en scroll: {e}")
         
+        # Guardar binding para limpiarlo después
+        binding_id = "<MouseWheel>"
+        self.bindings_mousewheel.append(binding_id)
         def_canvas.bind_all("<MouseWheel>", on_mousewheel)
         
         # Pack canvas y scrollbar
@@ -345,7 +416,7 @@ class Crucigrama:
         
         self.crear_tablero(panel_tablero, crucigrama)
         
-        # Panel derecho - Controles (BOTONES DEL SEGUNDO CÓDIGO)
+        # Panel derecho - Controles (sin botón de pista)
         panel_ctrl = tk.Frame(container, bg='#34495E', width=180)
         panel_ctrl.pack(side='right', fill='y', padx=(10, 0))
         panel_ctrl.pack_propagate(False)
@@ -353,17 +424,14 @@ class Crucigrama:
         tk.Label(panel_ctrl, text="CONTROLES", 
                 font=("Arial", 13, "bold"), bg='#34495E', fg='white', pady=15).pack()
         
-        # BOTÓN DE AYUDA - Solo revela primera letra
-        tk.Button(panel_ctrl, text="💡 AYUDA", bg='#F39C12', fg='white',
+        tk.Button(panel_ctrl, text="✓ VERIFICAR", bg='#2ECC71', fg='white',
                  font=("Arial", 11, "bold"), width=14, height=2,
-                 command=self.ayuda).pack(pady=8)
+                 command=self.verificar).pack(pady=8)
         
-        # BOTÓN RENDIRSE - Revela todo
-        tk.Button(panel_ctrl, text="🏳️ RENDIRSE", bg='#E74C3C', fg='white',
+        tk.Button(panel_ctrl, text="🗑 LIMPIAR", bg='#3498DB', fg='white',
                  font=("Arial", 11, "bold"), width=14, height=2,
-                 command=self.rendirse).pack(pady=8)
+                 command=self.limpiar).pack(pady=8)
         
-        # BOTÓN MENÚ - Confirma salida
         tk.Button(panel_ctrl, text="🏠 MENÚ", bg='#7F8C8D', fg='white',
                  font=("Arial", 11, "bold"), width=14, height=2,
                  command=self.volver_al_menu).pack(pady=8)
@@ -473,11 +541,20 @@ class Crucigrama:
                                     selectbackground='#3498DB')
                     entry.place(relx=0.5, rely=0.55, anchor='center', width=tam-8, height=tam-8)
                     
+                    # Guardar posición para navegación
+                    entry.posicion = (i, j)
+                    
                     # Encontrar letra correcta
                     letra_correcta = self.encontrar_letra_correcta(i, j, crucigrama)
                     entry.letra_correcta = letra_correcta
-                    entry.posicion = (i, j)  # Guardar posición para avance automático
-                    entry.bind('<KeyRelease>', lambda e, row=i, col=j: self.on_letra(e))
+                    
+                    # Vincular eventos
+                    entry.bind('<KeyRelease>', lambda e, entry=entry: self.on_letra(e, entry))
+                    entry.bind('<Right>', lambda e, entry=entry: self.mover_derecha(entry))
+                    entry.bind('<Left>', lambda e, entry=entry: self.mover_izquierda(entry))
+                    entry.bind('<Up>', lambda e, entry=entry: self.mover_arriba(entry))
+                    entry.bind('<Down>', lambda e, entry=entry: self.mover_abajo(entry))
+                    
                     fila_celdas.append(entry)
                 else:
                     fila_celdas.append(None)
@@ -485,6 +562,14 @@ class Crucigrama:
             self.celdas.append(fila_celdas)
         
         print(f"Tablero creado con {len(celdas_activas)} celdas activas!")
+        
+        # Enfocar la primera celda
+        if self.celdas and self.celdas[0]:
+            for fila in self.celdas:
+                for celda in fila:
+                    if celda:
+                        celda.focus_set()
+                        return
 
     def encontrar_letra_correcta(self, fila, col, crucigrama):
         """Encuentra la letra correcta para una celda específica"""
@@ -500,9 +585,68 @@ class Crucigrama:
                     return p['palabra'][fila - f]
         return ''
 
-    def on_letra(self, event):
-        """Al escribir una letra - CON AVANCE AUTOMÁTICO"""
-        entry = event.widget
+    def encontrar_siguiente_celda(self, fila, col):
+        """Encuentra la siguiente celda activa en la dirección de la palabra"""
+        # Primero, encontrar a qué palabra pertenece esta celda
+        for p in self.crucigrama_actual['palabras']:
+            f = p['fila'] - 1
+            c = p['columna'] - 1
+            
+            if p['direccion'] == 'H':
+                # Palabra horizontal
+                if fila == f and c <= col < c + len(p['palabra']):
+                    # Verificar si hay siguiente celda en esta palabra
+                    next_col = col + 1
+                    if next_col < c + len(p['palabra']) and next_col < len(self.celdas[0]):
+                        if self.celdas[fila][next_col]:
+                            return self.celdas[fila][next_col]
+            else:
+                # Palabra vertical
+                if col == c and f <= fila < f + len(p['palabra']):
+                    # Verificar si hay siguiente celda en esta palabra
+                    next_fila = fila + 1
+                    if next_fila < f + len(p['palabra']) and next_fila < len(self.celdas):
+                        if self.celdas[next_fila][col]:
+                            return self.celdas[next_fila][col]
+        
+        # Si no hay siguiente celda en la misma palabra, buscar cualquier celda vacía
+        for i in range(len(self.celdas)):
+            for j in range(len(self.celdas[0])):
+                if self.celdas[i][j] and not self.celdas[i][j].get():
+                    return self.celdas[i][j]
+        
+        return None
+
+    def mover_derecha(self, entry):
+        """Mueve el foco a la derecha"""
+        fila, col = entry.posicion
+        if col + 1 < len(self.celdas[0]) and self.celdas[fila][col + 1]:
+            self.celdas[fila][col + 1].focus_set()
+        return "break"
+
+    def mover_izquierda(self, entry):
+        """Mueve el foco a la izquierda"""
+        fila, col = entry.posicion
+        if col - 1 >= 0 and self.celdas[fila][col - 1]:
+            self.celdas[fila][col - 1].focus_set()
+        return "break"
+
+    def mover_arriba(self, entry):
+        """Mueve el foco hacia arriba"""
+        fila, col = entry.posicion
+        if fila - 1 >= 0 and self.celdas[fila - 1][col]:
+            self.celdas[fila - 1][col].focus_set()
+        return "break"
+
+    def mover_abajo(self, entry):
+        """Mueve el foco hacia abajo"""
+        fila, col = entry.posicion
+        if fila + 1 < len(self.celdas) and self.celdas[fila + 1][col]:
+            self.celdas[fila + 1][col].focus_set()
+        return "break"
+
+    def on_letra(self, event, entry):
+        """Al escribir una letra - con avance automático"""
         texto = entry.get().upper()
         
         # Solo 1 letra
@@ -514,7 +658,7 @@ class Crucigrama:
         # Solo letras
         if texto and not texto.isalpha():
             entry.delete(0, tk.END)
-            return
+            return "break"
         
         # Mayúscula
         if texto:
@@ -524,54 +668,20 @@ class Crucigrama:
             # Verificar
             if entry.get() == entry.letra_correcta:
                 entry.config(bg='#D5F4E6', fg='#27AE60')  # Verde suave
-                self.verificar_palabras()
                 
-                # AVANCE AUTOMÁTICO a la siguiente celda
-                self.mover_a_siguiente_celda(entry)
+                # AVANZAR A LA SIGUIENTE CELDA AUTOMÁTICAMENTE
+                fila, col = entry.posicion
+                siguiente_celda = self.encontrar_siguiente_celda(fila, col)
+                if siguiente_celda:
+                    siguiente_celda.focus_set()
+                
+                # Verificar palabras completadas
+                self.verificar_palabras()
             else:
                 entry.config(bg='#FADBD8', fg='#C0392B')  # Rojo suave
                 self.root.after(300, lambda: entry.config(bg='#FFFFFF', fg='#000000'))
-
-    def mover_a_siguiente_celda(self, entry_actual):
-        """Mueve el foco a la siguiente celda disponible - FUNCIÓN DE AVANCE AUTOMÁTICO"""
-        fila_actual, col_actual = entry_actual.posicion
         
-        # Buscar la palabra a la que pertenece esta celda
-        palabra_info = None
-        for p in self.crucigrama_actual['palabras']:
-            f = p['fila'] - 1
-            c = p['columna'] - 1
-            
-            if p['direccion'] == 'H':
-                if fila_actual == f and c <= col_actual < c + len(p['palabra']):
-                    palabra_info = p
-                    break
-            else:
-                if col_actual == c and f <= fila_actual < f + len(p['palabra']):
-                    palabra_info = p
-                    break
-        
-        if not palabra_info:
-            return
-        
-        # Calcular la siguiente posición en la misma palabra
-        f = palabra_info['fila'] - 1
-        c = palabra_info['columna'] - 1
-        
-        if palabra_info['direccion'] == 'H':
-            # Siguiente celda horizontal
-            siguiente_col = col_actual + 1
-            if siguiente_col < c + len(palabra_info['palabra']):
-                siguiente_celda = self.celdas[fila_actual][siguiente_col]
-                if siguiente_celda:
-                    siguiente_celda.focus_set()
-        else:
-            # Siguiente celda vertical
-            siguiente_fila = fila_actual + 1
-            if siguiente_fila < f + len(palabra_info['palabra']):
-                siguiente_celda = self.celdas[siguiente_fila][col_actual]
-                if siguiente_celda:
-                    siguiente_celda.focus_set()
+        return "break"
 
     def verificar_palabras(self):
         """Verifica si hay palabras completas"""
@@ -633,145 +743,185 @@ class Crucigrama:
                         celda.config(bg='#2ECC71', fg='white')
 
     def juego_completado(self):
-        """Maneja el juego completado"""
+        """Maneja el juego completado y guarda el puntaje"""
         self.juego_activo = False
         tiempo_transcurrido = (datetime.datetime.now() - self.tiempo_inicio).seconds
         
-        messagebox.showinfo("¡GANASTE!", 
-                           f"¡Completaste todo el crucigrama!\n\n"
-                           f"🏆 Puntaje: {self.puntaje}\n"
-                           f"⏱️ Tiempo: {tiempo_transcurrido}s")
+        # Calcular puntaje final (base + bonificación por tiempo)
+        bonus_tiempo = max(0, 300 - tiempo_transcurrido)  # Bonificación por terminar rápido
+        puntaje_final = self.puntaje + bonus_tiempo
+        
+        # GUARDAR EL PUNTAJE EN LA BASE DE DATOS
+        puntaje_guardado = False
+        mensaje_usuario = ""
+        
+        if self.auth and self.auth.usuario_actual and self.database:
+            try:
+                usuario_id = self.database.obtener_id_usuario(self.auth.usuario_actual)
+                if usuario_id:
+                    # CORRECCIÓN: Usar guardar_puntaje (no registrar_puntaje)
+                    exito = self.database.guardar_puntaje(
+                        usuario_id=usuario_id,
+                        juego="Crucigrama",
+                        puntaje=puntaje_final,
+                        dificultad=None,  # No hay dificultad en crucigramas
+                        categoria=self.crucigrama_actual['nombre']
+                    )
+                    
+                    if exito:
+                        print(f"✅ Puntaje guardado: {puntaje_final} para usuario {self.auth.usuario_actual}")
+                        puntaje_guardado = True
+                        mensaje_usuario = f"¡Puntaje guardado en tu perfil!"
+                        
+                        # Verificar que se guardó realmente
+                        self.verificar_puntaje_guardado(usuario_id, puntaje_final)
+                    else:
+                        print("❌ No se pudo guardar el puntaje")
+                        mensaje_usuario = f"Error al guardar puntaje"
+                else:
+                    print("⚠️ No se pudo obtener el ID del usuario")
+                    mensaje_usuario = f"Usuario no encontrado"
+            except Exception as e:
+                print(f"❌ Error al guardar puntaje: {e}")
+                mensaje_usuario = f"Error técnico al guardar"
+        else:
+            print("⚠️ Usuario no autenticado o sin BD, no se guarda puntaje")
+            if not self.auth or not self.auth.usuario_actual:
+                mensaje_usuario = f"⚠️ Inicia sesión para guardar tus puntajes"
+            else:
+                mensaje_usuario = f"⚠️ No se pudo conectar con la base de datos"
+        
+        # Mensaje final al usuario
+        mensaje = f"¡Completaste todo el crucigrama!\n\n"
+        mensaje += f"🏆 Puntaje: {puntaje_final}\n"
+        mensaje += f"⏱️ Tiempo: {tiempo_transcurrido}s\n"
+        mensaje += f"📈 Bonus tiempo: +{bonus_tiempo}\n\n"
+        
+        if puntaje_guardado:
+            mensaje += f"✅ {mensaje_usuario}"
+        else:
+            mensaje += f"{mensaje_usuario}"
+        
+        messagebox.showinfo("¡GANASTE!", mensaje)
+        
         self.mostrar_menu_principal()
 
-    def ayuda(self):
-        """Da una ayuda - SOLO REVELA LA PRIMERA LETRA de palabras incompletas"""
-        # Buscar palabras que no estén completas
-        palabras_incompletas = []
-        
-        for p in self.crucigrama_actual['palabras']:
-            fila = p['fila'] - 1
-            col = p['columna'] - 1
-            completa = True
+    def verificar_puntaje_guardado(self, usuario_id, puntaje):
+        """Verifica que el puntaje se guardó correctamente"""
+        try:
+            conexion = self.database.get_conexion()
+            cursor = conexion.cursor()
             
-            if p['direccion'] == 'H':
-                for i in range(len(p['palabra'])):
-                    if col + i >= len(self.celdas[0]) or not self.celdas[fila][col + i].get():
-                        completa = False
-                        break
+            # Buscar el puntaje recién guardado
+            cursor.execute('''
+                SELECT COUNT(*) FROM puntajes 
+                WHERE usuario_id = ? AND juego = ? AND puntaje = ? AND categoria = ?
+            ''', (usuario_id, "Crucigrama", puntaje, self.crucigrama_actual['nombre']))
+            
+            count = cursor.fetchone()[0]
+            
+            # Mostrar todos los puntajes del usuario para debug
+            cursor.execute('''
+                SELECT * FROM puntajes 
+                WHERE usuario_id = ? AND juego = ?
+                ORDER BY fecha DESC
+                LIMIT 5
+            ''', (usuario_id, "Crucigrama"))
+            
+            puntajes = cursor.fetchall()
+            print(f"📊 Últimos 5 puntajes del usuario: {puntajes}")
+            
+            conexion.close()
+            
+            if count > 0:
+                print(f"✅ Verificación: Puntaje {puntaje} encontrado {count} veces en la BD")
             else:
-                for i in range(len(p['palabra'])):
-                    if fila + i >= len(self.celdas) or not self.celdas[fila + i][col].get():
-                        completa = False
-                        break
-            
-            if not completa:
-                palabras_incompletas.append(p)
-        
-        if not palabras_incompletas:
-            messagebox.showinfo("Info", "¡Ya completaste todo!")
-            return
-        
-        # Elegir una palabra al azar
-        p = random.choice(palabras_incompletas)
-        fila = p['fila'] - 1
-        col = p['columna'] - 1
-        
-        # SOLO revelar la PRIMERA letra
-        if p['direccion'] == 'H':
-            celda_primera = self.celdas[fila][col]
-            if celda_primera and not celda_primera.get():
-                celda_primera.delete(0, tk.END)
-                celda_primera.insert(0, p['palabra'][0])
-                celda_primera.config(bg='#F39C12', fg='white')
-                self.letras_ayuda_reveladas.add((fila, col))
-        else:
-            celda_primera = self.celdas[fila][col]
-            if celda_primera and not celda_primera.get():
-                celda_primera.delete(0, tk.END)
-                celda_primera.insert(0, p['palabra'][0])
-                celda_primera.config(bg='#F39C12', fg='white')
-                self.letras_ayuda_reveladas.add((fila, col))
+                print("❌ Verificación: Puntaje NO encontrado en la BD")
+                
+        except Exception as e:
+            print(f"❌ Error en verificación: {e}")
+
+    def verificar(self):
+        """Verifica todas las celdas"""
+        for fila in self.celdas:
+            for celda in fila:
+                if celda:
+                    if celda.get() == celda.letra_correcta:
+                        celda.config(bg='#2ECC71', fg='white')
+                    elif celda.get():
+                        celda.config(bg='#E74C3C', fg='white')
         
         self.verificar_palabras()
-        
-        dir_txt = "Horizontal →" if p['direccion'] == 'H' else "Vertical ↓"
-        messagebox.showinfo("💡 Ayuda", 
-                           f"Primera letra revelada para:\n\n"
-                           f"Palabra {p['numero']} ({dir_txt})\n"
-                           f"{p['definicion']}")
 
-    def rendirse(self):
-        """RENDIRSE - Revela todas las palabras después de confirmar"""
-        respuesta = messagebox.askyesno(
-            "🏳️ Rendirse", 
-            "¿Estás seguro de que quieres rendirte?\n\n"
-            "Se revelarán todas las respuestas y\n"
-            "la partida terminará."
-        )
+    def limpiar(self):
+        """Limpia el tablero"""
+        for fila in self.celdas:
+            for celda in fila:
+                if celda:
+                    celda.delete(0, tk.END)
+                    celda.config(bg='#FFFFFF', fg='#000000')
         
-        if respuesta:
-            # Revelar todas las palabras
-            for p in self.crucigrama_actual['palabras']:
-                fila = p['fila'] - 1
-                col = p['columna'] - 1
-                
-                if p['direccion'] == 'H':
-                    for i, letra in enumerate(p['palabra']):
-                        if col + i < len(self.celdas[0]):
-                            celda = self.celdas[fila][col + i]
-                            if celda:
-                                celda.delete(0, tk.END)
-                                celda.insert(0, letra)
-                                celda.config(bg='#E67E22', fg='white')  # Naranja para rendición
-                else:
-                    for i, letra in enumerate(p['palabra']):
-                        if fila + i < len(self.celdas):
-                            celda = self.celdas[fila + i][col]
-                            if celda:
-                                celda.delete(0, tk.END)
-                                celda.insert(0, letra)
-                                celda.config(bg='#E67E22', fg='white')
-            
-            self.juego_activo = False
-            tiempo_transcurrido = (datetime.datetime.now() - self.tiempo_inicio).seconds
-            
-            messagebox.showinfo("Partida Terminada", 
-                               f"Te rendiste después de {tiempo_transcurrido} segundos.\n\n"
-                               f"Palabras completadas: {self.palabras_ok}/{len(self.crucigrama_actual['palabras'])}\n"
-                               f"Puntaje final: {self.puntaje}\n\n"
-                               f"¡Sigue intentando!")
-            
-            self.mostrar_menu_principal()
+        self.palabras_ok = 0
+        self.puntaje = 0
+        self.palabras_completadas.clear()
+        self.lbl_puntaje.config(text="Puntaje: 0")
+        self.lbl_completado.config(text=f"Completado: 0/{len(self.crucigrama_actual['palabras'])}")
 
     def volver_al_menu(self):
-        """Vuelve al menú con confirmación de pérdida de progreso"""
-        respuesta = messagebox.askyesno(
-            "⚠️ Salir al Menú", 
-            "¿Estás seguro de que quieres salir?\n\n"
-            "Perderás todo el progreso de esta partida."
-        )
-        
-        if respuesta:
+        """Vuelve al menú"""
+        if messagebox.askyesno("Volver", "¿Volver al menú principal?"):
             self.mostrar_menu_principal()
 
     def volver_menu_principal(self):
         """Vuelve al menú principal de la aplicación"""
         try:
+            # Limpiar bindings del mousewheel primero
+            self.limpiar_bindings_mousewheel()
+            
             from menu_principal import MenuPrincipal
             for w in self.root.winfo_children():
                 w.destroy()
             
+            # Volver al menú principal pasando auth y database
+            MenuPrincipal(self.root, self.auth, self.database)
+            
+        except Exception as e:
+            print(f"Error volviendo al menú: {e}")
+            # Si hay error, intentar cerrar limpiamente
             try:
-                from app_manager import app_manager
-                MenuPrincipal(self.root, app_manager.auth, app_manager.database)
+                self.root.quit()
             except:
-                MenuPrincipal(self.root, None, None)
-        except:
-            self.root.quit()
+                pass
+
+
+# Función principal para iniciar el juego desde el menú principal
+def iniciar_crucigrama(root, auth=None, database=None):
+    """Función para iniciar el crucigrama desde el menú principal"""
+    for widget in root.winfo_children():
+        widget.destroy()
+    
+    # Crear instancia pasando auth y database
+    app = Crucigrama(root, auth, database)
 
 
 # Test
 if __name__ == "__main__":
     root = tk.Tk()
-    app = Crucigrama(root)
+    
+    # Para testing, crear auth y database mock si no existen
+    try:
+        from database import Database
+        from auth import AuthManager
+        
+        db = Database()
+        auth = AuthManager(db)
+        
+        # Configurar usuario de prueba (opcional)
+        # auth.usuario_actual = "test_user"
+        
+        app = Crucigrama(root, auth, db)
+    except ImportError:
+        print("⚠️ No se encontraron módulos de auth/database, ejecutando en modo prueba")
+        app = Crucigrama(root)
+    
     root.mainloop()

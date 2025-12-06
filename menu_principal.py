@@ -68,15 +68,15 @@ class MenuPrincipal:
             btn.pack(pady=8)
             self.configurar_hover(btn, color)
         
-        # COLUMNA CENTRAL - Más juegos
+        # COLUMNA CENTRAL - Laberinto, Ahorcado, Torre de Hanói y Sudoku
         frame_col_centro = tk.Frame(frame_botones, bg='#2C3E50')
         frame_col_centro.pack(side='left', padx=15)
         
         botones_centro = [
             ("🧭 LABERINTO", "#E67E22", self.laberinto),
-            ("🎯 AHORCADO", "#1ABC9C", self.ahorcado),  # NUEVO JUEGO
-            ("👤 USUARIOS", "#16A085", self.menu_usuarios),
-            ("🚪 SALIR", "#95A5A6", self.root.quit)
+            ("🎯 AHORCADO", "#1ABC9C", self.ahorcado),
+            ("🗼 TORRE DE HANÓI", "#16A085", self.torre_hanoi),
+            ("🔢 SUDOKU", "#8E44AD", self.sudoku)
         ]
         
         for texto, color, comando in botones_centro:
@@ -93,37 +93,30 @@ class MenuPrincipal:
             btn.pack(pady=8)
             self.configurar_hover(btn, color)
         
-        # COLUMNA DERECHA - Torre de Hanói y Puntajes
+        # COLUMNA DERECHA - Pong, Puntajes, Usuarios y Salir
         frame_col_der = tk.Frame(frame_botones, bg='#2C3E50')
         frame_col_der.pack(side='left', padx=15)
         
-        # Botón Torre de Hanói
-        btn_hanoi = tk.Button(frame_col_der, text="🗼 TORRE DE HANÓI", 
-                      font=("Arial", 12, "bold"),
-                      bg="#16A085", fg='white', 
-                      activebackground="#16A085",
-                      activeforeground='white',
-                      width=20, height=2,
-                      relief='flat',
-                      border=0,
-                      cursor='hand2',
-                      command=self.torre_hanoi)
-        btn_hanoi.pack(pady=8)
-        self.configurar_hover(btn_hanoi, "#16A085")
+        botones_der = [
+            ("🏓 PONG", "#3498DB", self.pong),  # AÑADÍ EL BOTÓN PONG
+            ("📊 PUNTAJES", "#F39C12", self.mostrar_puntajes),
+            ("👤 USUARIOS", "#16A085", self.menu_usuarios),
+            ("🚪 SALIR", "#95A5A6", self.root.quit)
+        ]
         
-        # Botón de puntajes
-        btn_puntajes = tk.Button(frame_col_der, text="📊 PUNTAJES", 
-                      font=("Arial", 12, "bold"),
-                      bg="#F39C12", fg='white', 
-                      activebackground="#F39C12",
-                      activeforeground='white',
-                      width=20, height=2,
-                      relief='flat',
-                      border=0,
-                      cursor='hand2',
-                      command=self.mostrar_puntajes)
-        btn_puntajes.pack(pady=8)
-        self.configurar_hover(btn_puntajes, "#F39C12")
+        for texto, color, comando in botones_der:
+            btn = tk.Button(frame_col_der, text=texto, 
+                          font=("Arial", 12, "bold"),
+                          bg=color, fg='white', 
+                          activebackground=color,
+                          activeforeground='white',
+                          width=20, height=2,
+                          relief='flat',
+                          border=0,
+                          cursor='hand2',
+                          command=comando)
+            btn.pack(pady=8)
+            self.configurar_hover(btn, color)
         
         # Footer con tu nombre
         footer = tk.Label(frame_principal, 
@@ -209,8 +202,14 @@ class MenuPrincipal:
         self.auth.cerrar_sesion(self.crear_menu_principal)
     
     def mostrar_puntajes(self):
-        """Muestra la tabla de puntajes"""
-        messagebox.showinfo("Puntajes", "Sistema de puntajes en desarrollo")
+        """Muestra el sistema completo de puntajes"""
+        from puntajes import SistemaPuntajes 
+        # Limpiar la ventana primero
+        for widget in self.root.winfo_children():
+            widget.destroy()
+    
+        # Crear el sistema de puntajes
+        SistemaPuntajes(self.root, self.database, self.auth)
     
     def sopa_letras(self):
         """Abre el juego de Sopa de Letras"""
@@ -246,3 +245,13 @@ class MenuPrincipal:
         """Abre el juego de Torre de Hanói"""
         from torre_hanoi import TorreHanoi
         TorreHanoi(self.root)
+    
+    def sudoku(self):
+        """Abre el juego de Sudoku"""
+        from sudoku import Sudoku
+        Sudoku(self.root)
+    
+    def pong(self):
+        """Abre el juego de Pong"""
+        from pong import Pong
+        Pong(self.root)
